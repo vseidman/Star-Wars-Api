@@ -41,6 +41,15 @@ class Favorites(db.Model):
     planet_id = db.Column(db.String(120))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
+    def serialize(self):
+        return {
+            "id": self.id,
+            "nature": self.nature.name,
+            "people_id": self.people_id,
+            "planet_id": self.planet_id,
+            "user_id": self.user_id
+            }
+
 
     # __table_args__ = (db.UniqueConstraint(
     #     "user_id",

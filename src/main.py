@@ -1,14 +1,16 @@
 """
 This module takes care of starting the API Server, Loading the DB and Adding the endpoints
 """
+
 import os
+from turtle import update
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
 from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import People, Planets, db, User
+from models import Favorites, People, Planets, db, User
 #from models import Person
 
 app = Flask(__name__)
@@ -31,7 +33,66 @@ def handle_invalid_usage(error):
 @app.route('/')
 def sitemap():
     return generate_sitemap(app)
+#Post
+@app.route('/favorites/<int:user_id>/<nature>', methods=['POST'])
+def add_favorites(user_id = None, nature = None):
+    if request.method == 'POST':
+        if user_id is not None and nature is not None:
+            print(user_id, nature)
+            user = User.query.filter_by(id=user_id).first()
+            if user is not None:
+                body = request.json
+                if body is not None:
+                    if nature == "planets":
+                        new_favorite = Favorites(user_id = user_id, planets_id = body["id"], nature = nature )
+                    elif nature == "people":
+                        new_favorite = Favorites(user_id = user_id, people_id = body["id"], nature = nature )
+                    db.session.add(new_favorite)
+                    try: 
+                        db.session.commit()
+                        return jsonify({"favorites":new_favorite.serialize()}), 201
+                    except Exception as error:
+                        db.session.rollback()
+                        return jsonify({"Message":f"Error{error.args}"}), 500
+                else: 
+                    return jsonify ({"Message":"Todos los campos son requeridos"}), 400
+            else: 
+                 return jsonify ({"Message":"Usuario no encontrado"}), 404
+        else: 
+            return jsonify ({"Message":"El id del usuario y la naturaleza son requeridos"}), 400
+    else:
+        return jsonify ({"Message":"Metodo no aceptado"}), 405
+            
+#Delete  
+@app.route("/favorites/<int:favorites_id>/<nature>", methods=['DELETE'])
+def delete_favorite( nature = None, favorites_id = None):
+    if request.method == 'DELETE':
+        favorites = Favorites.query.get(favorites_id)
+        if favorites is None:
+            return jsonify({"message": "Favorito no registrado"}), 404
+        elif favorites is not None:
+            if nature is None and nature != "people" and nature != "planet":
+                return jsonify({"message": "Naturaleza invalidad"}), 406
+            else:
+                if favorites_id is None:
+                    return jsonify({"message": "Falta favoritos"}), 400
+                elif favorites_id is not None:
+                    deleted_favorite = Favorites.query.get(favorites_id)
+                    if deleted_favorite is None:
+                        return jsonify({"message": "No encontre el favorito"}), 404
+                    elif deleted_favorite is not None:
+                        db.session.delete(deleted_favorite)
 
+                        try:
+                            db.session.commit()
+                            return jsonify([]), 204
+                        except Exception as error:
+                            print(error.args)
+                            db.session.rollback()
+                            return jsonify({"message": f"Error {error.args}"})  
+        
+
+#People & Planet GET
 @app.route('/people', methods=['GET'])
 @app.route('/people/<int:user_id>', methods=['GET'])
 def people_id(user_id = None):
