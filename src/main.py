@@ -64,32 +64,22 @@ def add_favorites(user_id = None, nature = None):
         return jsonify ({"Message":"Metodo no aceptado"}), 405
             
 #Delete  
-@app.route("/favorites/<int:favorites_id>/<nature>", methods=['DELETE'])
-def delete_favorite( nature = None, favorites_id = None):
+@app.route("/favorites/<int:favorites_id>", methods=['DELETE'])
+def delete_favorite(favorites_id = None):
     if request.method == 'DELETE':
         favorites = Favorites.query.get(favorites_id)
         if favorites is None:
             return jsonify({"message": "Favorito no registrado"}), 404
-        elif favorites is not None:
-            if nature is None and nature != "people" and nature != "planet":
-                return jsonify({"message": "Naturaleza invalidad"}), 406
-            else:
-                if favorites_id is None:
-                    return jsonify({"message": "Falta favoritos"}), 400
-                elif favorites_id is not None:
-                    deleted_favorite = Favorites.query.get(favorites_id)
-                    if deleted_favorite is None:
-                        return jsonify({"message": "No encontre el favorito"}), 404
-                    elif deleted_favorite is not None:
-                        db.session.delete(deleted_favorite)
-
-                        try:
-                            db.session.commit()
-                            return jsonify([]), 204
-                        except Exception as error:
-                            print(error.args)
-                            db.session.rollback()
-                            return jsonify({"message": f"Error {error.args}"})  
+        else:
+            try:
+                db.session.delete(favorites)
+                db.session.commit()
+                return jsonify([]), 204
+            except Exception as error:
+                print(error.args)
+                db.session.rollback()
+                return jsonify({"message": f"Error {error.args}"})  
+       
         
 
 #People & Planet GET
